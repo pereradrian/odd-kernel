@@ -1,0 +1,7 @@
+build
+dist
+odd_kernel.egg-info
+odd_kernel_env
+odd_kernel_env_dev
+.pytest_cache
+*.pyc
