@@ -1,8 +1,5 @@
 import numpy as np
-
-def add_padding(x, y, padding):
-    amplitude = np.abs(y-x)
-    return x - padding*amplitude, y + padding*amplitude
+from util import add_padding
 
 def gaussian_kde_interpolate(x_p, y_p, z_p, mesh_size, padding = 0.1, h=None):
     """
