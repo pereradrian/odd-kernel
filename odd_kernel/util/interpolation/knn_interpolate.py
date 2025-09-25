@@ -1,5 +1,6 @@
 import numpy as np
 from sklearn.neighbors import KNeighborsRegressor
+from .util import add_padding
 
 def knn_interpolate(x_p, y_p, z_p, mesh_size, k=5, padding=0.1):
     """
@@ -42,11 +43,6 @@ def knn_interpolate(x_p, y_p, z_p, mesh_size, k=5, padding=0.1):
     Z : ndarray of shape (mesh_size, mesh_size)
         Interpolated Z-values on the (X, Y) grid.
     """
-
-    # Añadir padding
-    def add_padding(x, y, padding):
-        amplitude = np.abs(y-x)
-        return x - padding*amplitude, y + padding*amplitude
 
     x_l, x_r = add_padding(np.min(x_p), np.max(x_p), padding)
     y_l, y_r = add_padding(np.min(y_p), np.max(y_p), padding)

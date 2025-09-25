@@ -1,5 +1,5 @@
 import numpy as np
-from util import add_padding
+from .util import add_padding
 
 def gaussian_kde_interpolate(x_p, y_p, z_p, mesh_size, padding = 0.1, h=None):
     """
