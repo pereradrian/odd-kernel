@@ -1,8 +1,40 @@
 import numpy as np
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsRegressor
 from .util import add_padding
 
-def knn_interpolate(x_p, y_p, z_p, mesh_size, k=5, padding=0.1):
+def knn_interpolate(x_p, y_p, X, n_neighbors=5, weights="distance"):
+    """
+    Interpolate values using KNeighborsRegressor with normalized coordinates via Pipeline.
+
+    Parameters
+    ----------
+    x_p : ndarray of shape (n_samples, n_features)
+        Known coordinates.
+    y_p : ndarray of shape (n_samples,)
+        Known values.
+    X : ndarray of shape (m_samples, n_features) 
+        Query coordinates.
+    n_neighbors : int
+        Number of neighbors.
+    weights : str or callable
+        Weighting strategy.
+
+    Returns
+    -------
+    y : ndarray of shape (m_samples,)
+        Interpolated values.
+    """
+    pipeline = Pipeline([
+        ("scaler", StandardScaler()),
+        ("knn", KNeighborsRegressor(n_neighbors=n_neighbors, weights=weights))
+    ])
+
+    pipeline.fit(x_p, y_p)
+    return pipeline.predict(X)
+
+def knn_interpolate_mesh(x_p, y_p, z_p, mesh_size, k=5, padding=0.1):
     """
     Interpolates scattered 3D data onto a regular 2D grid using KNeighborsRegressor.
 

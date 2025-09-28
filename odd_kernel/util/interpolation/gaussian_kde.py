@@ -1,7 +1,92 @@
 import numpy as np
 from .util import add_padding
 
-def gaussian_kde_interpolate(x_p, y_p, z_p, mesh_size, padding = 0.1, h=None):
+def gaussian_kde_interpolate(x_p, y_p, x, h=None, eps=1e-9):
+    """
+    Multidimensional Gaussian KDE interpolation with per-dimension normalization.
+    If no bandwidth (h) is provided, it defaults to the average spacing of the 
+    evaluation grid along each dimension.
+
+    Parameters
+    ----------
+    x_p : array_like, shape (n, d)
+        Sample points (coordinates).
+    y_p : array_like, shape (n,)
+        Values associated with the sample points.
+    x : array_like, shape (..., d)
+        Evaluation points. The last dimension must be d.
+        Example: for a 2D meshgrid, shape is (nx, ny, 2).
+    h : None, float or array_like of shape (d,), optional
+        Bandwidth. 
+        - If None: uses the average spacing of the evaluation grid per dimension.
+        - If float: the same bandwidth is used for all dimensions.
+        - If array_like: interpreted as per-dimension bandwidth.
+    eps : float
+        Small value to avoid division by zero.
+
+    Returns
+    -------
+    y : ndarray, shape (...,)
+        Interpolated values with the same shape as x without the last dimension.
+    """
+    x_p = np.asarray(x_p, dtype=float)
+    y_p = np.asarray(y_p, dtype=float)
+    x = np.asarray(x, dtype=float)
+
+    if x_p.ndim != 2:
+        raise ValueError("x_p must have shape (n, d)")
+    if x.shape[-1] != x_p.shape[1]:
+        raise ValueError("The last dimension of x must equal d")
+
+    n, d = x_p.shape
+
+    # Bandwidth selection
+    if h is None:
+        h_per_dim = []
+        for j in range(d):
+            coords = np.unique(x[..., j].ravel())
+            if len(coords) > 1:
+                spacing = np.mean(np.diff(np.sort(coords)))
+            else:
+                spacing = 1.0  # fallback if only one coordinate
+            h_per_dim.append(spacing)
+        h_per_dim = np.array(h_per_dim)
+    else:
+        if np.isscalar(h):
+            h_per_dim = np.full(d, float(h))
+        else:
+            h_per_dim = np.asarray(h, dtype=float)
+            if h_per_dim.shape != (d,):
+                raise ValueError(f"h must be scalar or of shape ({d},,)")
+
+    h_per_dim = np.maximum(h_per_dim, eps)
+
+    # Mean of y for centered Nadaraya-Watson estimator
+    y_mean = np.mean(y_p)
+
+    # Output arrays
+    out_shape = x.shape[:-1]
+    y = np.zeros(out_shape, dtype=float)
+    w = np.zeros(out_shape, dtype=float)
+
+    # Accumulate weights and weighted values
+    for i in range(n):
+        dx = (x - x_p[i]) / h_per_dim   # normalize per dimension
+        dist2 = np.sum(np.square(dx), axis=-1)
+        weight = np.exp(-0.5 * dist2)
+        w += weight
+        y += (y_p[i] - y_mean) * weight
+
+    mask = (w > 0)
+    if np.any(mask):
+        y[mask] /= w[mask]
+    y += y_mean
+
+    return y
+
+
+
+def gaussian_kde_interpolate_mesh(x_p, y_p, z_p, mesh_size, padding = 0.1, h=None):
     """
     Perform Gaussian kernel density estimation (KDE) based interpolation of scattered 3D data 
     over a regular 2D grid.

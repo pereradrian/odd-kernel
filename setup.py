@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='odd_kernel',
-    version='0.1.11',
+    version='0.1.13',
     packages=find_packages(),
     include_package_data=True,
     package_data={
@@ -11,7 +11,7 @@ setup(
     install_requires=[
         "pygame",
     ],
-    description='Some wrappers for python utilities that are commonly used.',
+    description='Some wrappers for python utilities.',
     author='OddKernel',
     author_email='odd.kernel.sl@gmail.com',
     url='https://github.com/pereradrian/odd-kernel',
@@ -20,5 +20,5 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
     ],
-    python_requires='>=3.7',
+    python_requires='>=3.11',
 )
