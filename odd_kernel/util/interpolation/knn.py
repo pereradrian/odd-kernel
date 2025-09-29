@@ -4,7 +4,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsRegressor
 from .util import add_padding
 
-def knn_interpolate(x_p, y_p, X, n_neighbors=5, weights="distance"):
+def knn_interpolate(x_p, y_p, X, n_neighbors=5, weights="distance", return_neighbors=False):
     """
     Interpolate values using KNeighborsRegressor with normalized coordinates via Pipeline.
 
@@ -20,6 +20,8 @@ def knn_interpolate(x_p, y_p, X, n_neighbors=5, weights="distance"):
         Number of neighbors.
     weights : str or callable
         Weighting strategy.
+    return_neighbors : bool
+        If to return additionally the neighbors used in the estimation.
 
     Returns
     -------
@@ -32,7 +34,15 @@ def knn_interpolate(x_p, y_p, X, n_neighbors=5, weights="distance"):
     ])
 
     pipeline.fit(x_p, y_p)
-    return pipeline.predict(X)
+    result = pipeline.predict(X)
+
+    if return_neighbors:
+        assert len(X) == 1, "Return neighbors only available for single sample"
+        x_scaled = pipeline.named_steps["scaler"].transform(X)
+        _, indices = pipeline.named_steps["knn"].kneighbors(x_scaled)
+        return result, indices
+    else:
+        return result
 
 def knn_interpolate_mesh(x_p, y_p, z_p, mesh_size, k=5, padding=0.1):
     """
