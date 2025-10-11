@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='odd_kernel',
-    version='0.1.14',
+    version='0.1.21',
     packages=find_packages(),
     include_package_data=True,
     package_data={
@@ -10,6 +10,9 @@ setup(
     },
     install_requires=[
         "pygame",
+        "yfinance",
+        "pandas",
+        "numpy",
     ],
     description='Some wrappers for python utilities.',
     author='OddKernel',
