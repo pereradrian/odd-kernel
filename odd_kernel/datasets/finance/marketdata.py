@@ -67,13 +67,15 @@ class MarketDataProvider:
     Provides summary, raw data, and interpolated data methods.
     """
 
-    def __init__(self, max_cache_size=100):
+    def __init__(self, max_cache_size=100, show_download_progress=False):
+        self.dates_map = {}
         self.cache = {}
         self.max_cache_size = max_cache_size
         self.cache_keys = []
+        self.show_download_progress = show_download_progress
 
     # ------------------------------------------------------------
-    def _download(self, tickers: Union[str, List[str]], start: str, end: str) -> dict:
+    def _download(self, tickers: Union[str, List[str]]) -> dict:
         """Downloads and caches Yahoo Finance data for one or multiple tickers."""
 
         # Normalizar a lista
@@ -85,9 +87,8 @@ class MarketDataProvider:
 
         # Buscar los que ya estén cacheados
         for ticker in tickers:
-            key = (ticker, start, end)
-            if key in self.cache:
-                data_by_ticker[ticker] = self.cache[key]
+            if ticker in self.cache:
+                data_by_ticker[ticker] = self.cache[ticker]
             else:
                 missing.append(ticker)
 
@@ -95,15 +96,15 @@ class MarketDataProvider:
         if missing:
             data = yf.download(
                 missing,
-                start=start,
-                end=end,
-                progress=False,
+                start= "1800-12-31", 
+                end= pd.Timestamp.today().strftime("%Y-%m-%d"),
+                progress=self.show_download_progress,
                 auto_adjust=False,
                 multi_level_index=False,
             )
 
             if data.empty:
-                raise ValueError(f"No data retrieved for '{missing}' between {start} and {end}.")
+                raise ValueError(f"No data retrieved for '{missing}'.")
 
             # Si se descargaron varios tickers, Yahoo devuelve un DataFrame con columna 'Ticker'
             if isinstance(data.columns, pd.MultiIndex):
@@ -112,16 +113,14 @@ class MarketDataProvider:
                     data_by_ticker[ticker] = {}
                     for data_type in data_types:
                         data_by_ticker[ticker][data_type] = data[(data_type.value, ticker)].dropna()
-                    key = (ticker, start, end)
-                    self._add_to_cache(key, data_by_ticker[ticker])
+                    self._add_to_cache(ticker, data_by_ticker[ticker])
             else:
                 # Only one ticker missing
                 data_by_ticker[ticker] = {}
                 data_types = set(DataType.parse(data_type) for data_type in data.columns)
                 for data_type in data_types:
-                    key = (ticker, start, end)
                     data_by_ticker[ticker][data_type] = data[data_type.value].dropna()
-                self._add_to_cache(key, data_by_ticker[ticker])
+                self._add_to_cache(ticker, data_by_ticker[ticker])
 
         return data_by_ticker
 
@@ -136,7 +135,7 @@ class MarketDataProvider:
         self.cache_keys.append(key)
 
     # ------------------------------------------------------------
-    def get_summary(self, tickers, start="2000-01-01", end=None):
+    def get_summary(self, tickers):
         """
         Returns a summary for each ticker:
         - name
@@ -145,7 +144,7 @@ class MarketDataProvider:
         - available fields
         """
         summaries = []
-        data_by_ticker = self._download(tickers, start, end or pd.Timestamp.today().strftime("%Y-%m-%d"))
+        data_by_ticker = self._download(tickers)
         for ticker, data in data_by_ticker.items():
             # Take any data, for instance first key
             df = data[next(iter(data))]
@@ -164,9 +163,9 @@ class MarketDataProvider:
         return pd.DataFrame(summaries)
 
     # ------------------------------------------------------------
-    def get_raw(self, tickers: Union[str, List[str]], start: str, end: str, field: DataType):
+    def get_raw(self, tickers: Union[str, List[str]], field: DataType):
         """Returns raw data for a given ticker and field."""
-        data_by_ticker = self._download(tickers, start, end)
+        data_by_ticker = self._download(tickers)
         return {ticker:data_by_ticker[ticker][field] for ticker in data_by_ticker.keys()}
         
 
@@ -178,10 +177,11 @@ class MarketDataProvider:
         field: DataType,
         resolution: Period,
         index_type: IndexType = IndexType.DATETIME,
+        extrapolate_left = False
     ):
         """
         Returns interpolated data for a given ticker, field, and resolution.
-        Performs flat extrapolation to the left and right of the original data range.
+        Performs flat extrapolation to the left and right of the original data range if required.
 
         Parameters
         ----------
@@ -201,13 +201,14 @@ class MarketDataProvider:
             - DATETIME → pandas datetime index (default)
             - EPOCH → seconds since 1970-01-01
             - INDEX → integer positions (0, 1, 2, …)
+        extrapolate_left: Wether to perform flat extrapolation to the left or not. 
 
         Returns
         -------
         pd.DataFrame
             A DataFrame indexed according to `index_type`, containing interpolated and extrapolated values.
         """
-        data_by_ticker = self.get_raw(tickers, start, end, field)
+        data_by_ticker = self.get_raw(tickers, field)
         freq = resolution.to_pandas_freq()
 
         # Create full time grid
@@ -216,7 +217,9 @@ class MarketDataProvider:
         # Interpolate + extrapolate flat
         interpolated_data = {}
         for ticker in data_by_ticker:
-            interpolated_data[ticker] = data_by_ticker[ticker].reindex(full_index).interpolate(method="time").ffill().bfill()
+            interpolated_data[ticker] = data_by_ticker[ticker].reindex(full_index).interpolate(method="time").ffill()
+            if extrapolate_left:
+                interpolated_data[ticker] = interpolated_data[ticker].bfill()
 
         # Format index according to index_type
         for ticker, interpolated in interpolated_data.items():

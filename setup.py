@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='odd_kernel',
-    version='0.1.24',
+    version='0.1.26',
     packages=find_packages(),
     include_package_data=True,
     package_data={

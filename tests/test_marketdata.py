@@ -47,28 +47,25 @@ def test_period_invalid_value():
 # DOWNLOAD AND SUMMARY
 # ------------------------------------------------------------
 
-def test_download_and_cache(market_data_provider, ticker, date_range):
-    start, end = date_range
-    data_by_ticker_1 = market_data_provider._download(ticker, start, end)
-    data_by_ticker_2 = market_data_provider._download(ticker, start, end)
+def test_download_and_cache(market_data_provider, ticker):
+    data_by_ticker_1 = market_data_provider._download(ticker)
+    data_by_ticker_2 = market_data_provider._download(ticker)
     # Cached object should be the same
     assert data_by_ticker_1
     assert data_by_ticker_1[ticker] is data_by_ticker_2[ticker]
     assert all(data_type  in data_by_ticker_1[ticker] for data_type in DataType)
 
-def test_download_and_cache_multi(market_data_provider, tickers, date_range):
-    start, end = date_range
-    data_by_ticker_1 = market_data_provider._download(tickers, start, end)
-    data_by_ticker_2 = market_data_provider._download(tickers, start, end)
+def test_download_and_cache_multi(market_data_provider, tickers):
+    data_by_ticker_1 = market_data_provider._download(tickers)
+    data_by_ticker_2 = market_data_provider._download(tickers)
     # Cached object should be the same
     assert data_by_ticker_1
     assert all(data_by_ticker_1[column] is data_by_ticker_2[column] for column in data_by_ticker_1)
     assert all(data_type in data_by_ticker_1[ticker] for ticker in tickers for data_type in DataType)
 
 
-def test_get_summary(market_data_provider, ticker, date_range):
-    start, end = date_range
-    summary = market_data_provider.get_summary([ticker], start, end)
+def test_get_summary(market_data_provider, ticker):
+    summary = market_data_provider.get_summary([ticker])
     assert isinstance(summary, pd.DataFrame)
     assert "fields" in summary.columns
     assert ticker in summary["name"].values
@@ -78,19 +75,17 @@ def test_get_summary(market_data_provider, ticker, date_range):
 # RAW AND INTERPOLATED DATA
 # ------------------------------------------------------------
 
-def test_get_raw_close_field(market_data_provider, ticker, date_range):
-    start, end = date_range
+def test_get_raw_close_field(market_data_provider, ticker):
     data_type = DataType.CLOSE
-    data_by_ticker = market_data_provider.get_raw(ticker, start, end, data_type)
+    data_by_ticker = market_data_provider.get_raw(ticker, data_type)
     assert isinstance(data_by_ticker, dict)
     assert all(isinstance(data, pd.Series) for data in data_by_ticker.values())
     assert all(data.index.is_monotonic_increasing for data in data_by_ticker.values())
 
 
-def test_get_raw_invalid_field(market_data_provider, ticker, date_range):
-    start, end = date_range
+def test_get_raw_invalid_field(market_data_provider, ticker):
     with pytest.raises(ValueError):
-        market_data_provider.get_raw(ticker, start, end, DataType("Nonexistent"))
+        market_data_provider.get_raw(ticker, DataType("Nonexistent"))
 
 
 def test_get_interpolated_daily(market_data_provider, tickers, date_range):
