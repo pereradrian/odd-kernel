@@ -2,14 +2,13 @@ from setuptools import setup, find_packages
 
 setup(
     name='odd_kernel',
-    version='0.1.26',
+    version='0.1.29',
     packages=find_packages(),
     include_package_data=True,
     package_data={
         "odd_kernel.util": ["assets/*"],
     },
     install_requires=[
-        "pygame",
         "yfinance",
         "pandas",
         "numpy",

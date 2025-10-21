@@ -175,7 +175,7 @@ class MarketDataProvider:
         start: str,
         end: str,
         field: DataType,
-        resolution: Period,
+        resolution: Period = None,
         index_type: IndexType = IndexType.DATETIME,
         extrapolate_left = False
     ):
@@ -194,7 +194,7 @@ class MarketDataProvider:
         field : DataField
             The financial data field to retrieve (e.g., CLOSE, OPEN).
         resolution : Period
-            The target temporal resolution, e.g., Period(1, TimeUnit.DAY) or Period(3, TimeUnit.MONTHS).
+            The target temporal resolution, e.g., Period(1, TimeUnit.DAY) or Period(3, TimeUnit.MONTHS). If None no interpolation is performed.
         index_type : IndexType, optional
             Defines the format of the time index in the output:
             - STRING → 'YYYY-MM-DD'
@@ -209,17 +209,26 @@ class MarketDataProvider:
             A DataFrame indexed according to `index_type`, containing interpolated and extrapolated values.
         """
         data_by_ticker = self.get_raw(tickers, field)
-        freq = resolution.to_pandas_freq()
+        if resolution is not None:
+            freq = resolution.to_pandas_freq()
 
-        # Create full time grid
-        full_index = pd.date_range(start=start, end=end, freq=freq)
+            # Create full time grid
+            full_index = pd.date_range(start=start, end=end, freq=freq)
 
-        # Interpolate + extrapolate flat
-        interpolated_data = {}
-        for ticker in data_by_ticker:
-            interpolated_data[ticker] = data_by_ticker[ticker].reindex(full_index).interpolate(method="time").ffill()
-            if extrapolate_left:
-                interpolated_data[ticker] = interpolated_data[ticker].bfill()
+            # Interpolate + extrapolate flat
+            interpolated_data = {}
+            for ticker in data_by_ticker:
+                interpolated_data[ticker] = data_by_ticker[ticker].reindex(full_index).interpolate(method="time").ffill()
+                if extrapolate_left:
+                    interpolated_data[ticker] = interpolated_data[ticker].bfill()
+        else:
+            interpolated_data = {}
+            # Filter to end and start
+            date_max = pd.to_datetime(end)
+            date_min = pd.to_datetime(start)
+            for ticker, data in data_by_ticker.items():
+                mask = (date_min <= data.index) & (data.index <= date_max)
+                interpolated_data[ticker] = data.loc[mask]
 
         # Format index according to index_type
         for ticker, interpolated in interpolated_data.items():
