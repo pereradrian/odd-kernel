@@ -1,6 +1,6 @@
 import pytest
 import pandas as pd
-from odd_kernel.datasets.finance.marketdata import MarketDataProvider, DataType, Period, TimeUnit, AVAILABLE_TICKERS
+from odd_kernel.datasets.marketdata import MarketDataProvider, DataType, Period, TimeUnit, AVAILABLE_TICKERS
 
 
 @pytest.fixture(scope="module")

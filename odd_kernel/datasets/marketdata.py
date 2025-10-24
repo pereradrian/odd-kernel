@@ -5,7 +5,6 @@ from typing import List, Dict, Union
 
 NANOSECONDS_PER_SECOND = 1_000_000_000
 
-
 class DataType(Enum):
     """Available financial data fields."""
 
